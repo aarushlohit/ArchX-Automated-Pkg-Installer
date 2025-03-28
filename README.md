@@ -46,6 +46,6 @@ Feel free to fork the repository and submit pull requests for improvements! 🙌
 
 ❤️ Support
 
-If you find this script useful, consider buying me a coffee ☕ to keep me motivated!
+If you find this script useful, consider buying me a coffee ☕ google pay number: 6369385973 to keep me motivated!
 
 Made with ❤️ by AarushLohit
