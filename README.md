@@ -2,6 +2,10 @@
 
 ArchX Installer is an automated script designed to make installing essential packages, AUR helpers, and desktop environments on Arch Linux fast, easy, and hassle-free! 🚀
 
+
+![Screenshot_20250328_125108](https://github.com/user-attachments/assets/6edce262-ea22-4c07-807c-810bcbc253c6)
+
+
 🎯 Features
 
 Install Yay or Paru AUR helpers
