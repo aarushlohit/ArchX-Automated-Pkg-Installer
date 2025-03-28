@@ -117,7 +117,7 @@ install_general_software() {
     read -p "❓ Do you want to install Hyprland necessary packages as well? (y/N): " install_hypr_pkgs
 
     echo "🔧 Installing general software..."
-    $aur_helper -S firefox vlc gimp libreoffice-fresh neofetch --noconfirm
+    $aur_helper -S firefox vlc gimp libreoffice-fresh neofetch kate kwrite visual-studio-code-bin virtualbox linux-headers steam ocs-url wine winetricks obs-studio spectacle xournalpp proton proton-tricks --noconfirm
 
     if [[ "$install_hypr_pkgs" =~ ^[Yy]$ ]]; then
         echo "🔧 Installing Hyprland necessary packages..."
