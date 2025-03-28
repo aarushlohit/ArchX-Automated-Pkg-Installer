@@ -24,7 +24,7 @@ Interactive menu with a clean and user-friendly experience
 
 1️⃣ Download the script
 
-git clone https://github.com/yourusername/ArchX-Installer.git && cd ArchX-Installer
+git clone https://github.com/aarushlohit/ArchX-Installer.git && cd ArchX-Installer
 
 2️⃣ Make it executable
 
