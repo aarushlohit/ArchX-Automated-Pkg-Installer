@@ -25,7 +25,6 @@ choose_aur_helper() {
 install_paru() {
     update_system
     ask_reinstall "paru" || return
-
     echo "🔧 Installing Paru..."
     git clone https://aur.archlinux.org/paru.git && cd paru
     makepkg -si
@@ -35,11 +34,19 @@ install_paru() {
 install_yay() {
     update_system
     ask_reinstall "yay" || return
-
     echo "🔧 Installing Yay..."
     git clone https://aur.archlinux.org/yay.git && cd yay
     makepkg -si
     cd ..
+}
+
+install_blackarch() {
+    echo "🔧 Installing BlackArch repository..."
+    curl -O https://blackarch.org/strap.sh
+    chmod +x strap.sh
+    sudo ./strap.sh
+    sudo pacman -Syyu --noconfirm
+    echo "✅ BlackArch repository installed!"
 }
 
 install_chaotic_aur() {
@@ -54,7 +61,6 @@ install_chaotic_aur() {
 install_hyprland() {
     update_system
     choose_aur_helper
-
     read -p "⚠️ Do you want to install Chaotic AUR for smoother Hyprland installation? (y/N): " choice
     [[ $choice =~ ^[Yy]$ ]] && install_chaotic_aur
 
@@ -62,11 +68,6 @@ install_hyprland() {
 
     echo "🔧 Installing Hyprland..."
     $aur_helper -S hyprland waybar rofi dunst alacritty thunar polkit-gnome nwg-look grimblast-git --noconfirm
-
-    echo "🔧 Installing additional Hyprland packages..."
-    $aur_helper -S wallust-git rofi-lbonn-wayland rofi-lbonn-wayland-git \
-                pokemon-colorscripts-git wlogout zsh-theme-powerlevel10k-git grimblast-git \
-                python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git --noconfirm
 
     echo "🎨 Select Hyprland dotfiles:"
     echo "1) Jakoolit"
@@ -113,7 +114,6 @@ install_cinnamon() {
 install_general_software() {
     update_system
     choose_aur_helper
-
     read -p "❓ Do you want to install Hyprland necessary packages as well? (y/N): " install_hypr_pkgs
 
     echo "🔧 Installing general software..."
@@ -132,28 +132,30 @@ show_menu() {
         clear
         echo "===================================="
         echo "  ⚡ Arch Linux Package Installer ⚡"
-        echo "        ⚡ Script by aarushLohit ⚡"
+        echo "        ⚡ Script by AarushLohit ⚡"
         echo "===================================="
         echo "1) Install Paru"
         echo "2) Install Yay"
-        echo "3) Install Chaotic AUR"
-        echo "4) Install Hyprland"
-        echo "5) Install GNOME"
-        echo "6) Install Cinnamon"
-        echo "7) Install General Software"
-        echo "8) Exit"
+        echo "3) Install BlackArch Repository"
+        echo "4) Install Chaotic AUR"
+        echo "5) Install Hyprland"
+        echo "6) Install GNOME"
+        echo "7) Install Cinnamon"
+        echo "8) Install General Software"
+        echo "9) Exit"
         echo "===================================="
-        read -p "Enter choice (1-8): " choice
+        read -p "Enter choice (1-9): " choice
 
         case $choice in
             1) install_paru ;;
             2) install_yay ;;
-            3) install_chaotic_aur ;;
-            4) install_hyprland ;;
-            5) install_gnome ;;
-            6) install_cinnamon ;;
-            7) install_general_software ;;
-            8) exit 0 ;;
+            3) install_blackarch ;;
+            4) install_chaotic_aur ;;
+            5) install_hyprland ;;
+            6) install_gnome ;;
+            7) install_cinnamon ;;
+            8) install_general_software ;;
+            9) exit 0 ;;
             *) echo "❌ Invalid choice!" ;;
         esac
 
