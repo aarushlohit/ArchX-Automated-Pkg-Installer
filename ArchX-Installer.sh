@@ -2,7 +2,7 @@
 
 update_system() {
     echo "🔄 Updating system..."
-    sudo pacman -Syu base base-devel --noconfirm
+    sudo pacman -Syu base base-devel git --noconfirm
 }
 
 ask_reinstall() {
@@ -127,6 +127,25 @@ install_general_software() {
     fi
 }
 
+install_gaming_packages() {
+    update_system
+    read -p "❓ Do you want to use Yay (Y) or Paru (P) for installation? " choice
+    case "$choice" in
+        [Yy]) aur_helper="yay" ;;
+        [Pp]) aur_helper="paru" ;;
+        *)
+            echo "⚠️ Invalid choice. Defaulting to yay."
+            aur_helper="yay"
+            ;;
+    esac
+
+    echo "🎮 Installing Gaming Packages..."
+    $aur_helper -S heroic-games-launcher-bin lutris steam steam-native-runtime steamtinkerlaunch \
+        dxvk-mingw-git gamemode mangohud lib32-mangohud vkbasalt lib32-vkbasalt protontricks-git \
+        boxtron reshade-shaders-git corectrl game-devices-udev input-devices-support \
+        keyboard-visualizer-git piper retroarch-autoconfig-udev-git wine-staging wine-meta --noconfirm
+}
+
 show_menu() {
     while true; do
         clear
@@ -142,9 +161,10 @@ show_menu() {
         echo "6) Install GNOME"
         echo "7) Install Cinnamon"
         echo "8) Install General Software"
-        echo "9) Exit"
+        echo "9) Install Gaming Packages"
+        echo "10) Exit"
         echo "===================================="
-        read -p "Enter choice (1-9): " choice
+        read -p "Enter choice (1-10): " choice
 
         case $choice in
             1) install_paru ;;
@@ -155,7 +175,8 @@ show_menu() {
             6) install_gnome ;;
             7) install_cinnamon ;;
             8) install_general_software ;;
-            9) exit 0 ;;
+            9) install_gaming_packages ;;
+            10) exit 0 ;;
             *) echo "❌ Invalid choice!" ;;
         esac
 
