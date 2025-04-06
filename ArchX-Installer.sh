@@ -1,13 +1,22 @@
 #!/bin/bash
 
+# ==============================
+# ⚡ Arch Linux Package Installer ⚡
+#        Script by aarushLohit
+# ==============================
+
 update_system() {
     echo "🔄 Updating system..."
-    sudo pacman -Syu base base-devel git --noconfirm
+    sudo pacman -Syu base base-devel --noconfirm
+}
+
+is_installed() {
+    pacman -Qq "$1" &>/dev/null
 }
 
 ask_reinstall() {
     local package=$1
-    if pacman -Qi $package &>/dev/null; then
+    if is_installed "$package"; then
         read -p "⚠️ $package is already installed. Do you want to reinstall? (y/N): " choice
         [[ $choice =~ ^[Yy]$ ]] || return 1
     fi
@@ -16,10 +25,7 @@ ask_reinstall() {
 
 choose_aur_helper() {
     read -p "❓ Which AUR helper do you want to use (yay/paru)? " aur_helper
-    if [[ "$aur_helper" != "yay" && "$aur_helper" != "paru" ]]; then
-        echo "⚠️ Invalid choice. Defaulting to yay."
-        aur_helper="yay"
-    fi
+    [[ "$aur_helper" != "yay" && "$aur_helper" != "paru" ]] && aur_helper="yay"
 }
 
 install_paru() {
@@ -40,13 +46,14 @@ install_yay() {
     cd ..
 }
 
-install_blackarch() {
-    echo "🔧 Installing BlackArch repository..."
+install_blackarch_repo() {
+    echo "🔧 Installing BlackArch Repository..."
     curl -O https://blackarch.org/strap.sh
+    echo "🔐 Verifying script signature..."
+    echo "Please manually verify the signature for now."
     chmod +x strap.sh
     sudo ./strap.sh
-    sudo pacman -Syyu --noconfirm
-    echo "✅ BlackArch repository installed!"
+    sudo pacman -Syu
 }
 
 install_chaotic_aur() {
@@ -61,13 +68,23 @@ install_chaotic_aur() {
 install_hyprland() {
     update_system
     choose_aur_helper
+
     read -p "⚠️ Do you want to install Chaotic AUR for smoother Hyprland installation? (y/N): " choice
     [[ $choice =~ ^[Yy]$ ]] && install_chaotic_aur
 
-    ask_reinstall "hyprland" || return
+    if pacman -Qq hyprland &>/dev/null; then
+        read -p "⚠️ Hyprland is already installed. Do you want to reinstall? (y/N): " reinstall_choice
+        [[ ! "$reinstall_choice" =~ ^[Yy]$ ]] && return
+    fi
 
-    echo "🔧 Installing Hyprland..."
+    echo "🔧 Installing Hyprland and dependencies..."
+    $aur_helper -Rns rofi-lbonn-wayland-git --noconfirm 2>/dev/null
     $aur_helper -S hyprland waybar rofi dunst alacritty thunar polkit-gnome nwg-look grimblast-git --noconfirm
+
+    echo "🔧 Installing additional Hyprland packages..."
+    $aur_helper -S wallust-git rofi-lbonn-wayland rofi-lbonn-wayland-git \
+                pokemon-colorscripts-git wlogout zsh-theme-powerlevel10k-git \
+                python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git --noconfirm
 
     echo "🎨 Select Hyprland dotfiles:"
     echo "1) Jakoolit"
@@ -100,50 +117,100 @@ install_hyprland() {
 install_gnome() {
     update_system
     ask_reinstall "gnome" || return
-    echo "🔧 Installing GNOME..."
     sudo pacman -S gnome gnome-extra --noconfirm
 }
 
 install_cinnamon() {
     update_system
     ask_reinstall "cinnamon" || return
-    echo "🔧 Installing Cinnamon..."
     sudo pacman -S cinnamon --noconfirm
 }
 
 install_general_software() {
     update_system
     choose_aur_helper
-    read -p "❓ Do you want to install Hyprland necessary packages as well? (y/N): " install_hypr_pkgs
+
+    read -p "❓ Do you want to install Hyprland packages too? (y/N): " install_hypr_pkgs
 
     echo "🔧 Installing general software..."
     $aur_helper -S firefox vlc gimp libreoffice-fresh neofetch kate kwrite visual-studio-code-bin virtualbox linux-headers steam ocs-url wine winetricks obs-studio spectacle xournalpp proton proton-tricks --noconfirm
 
     if [[ "$install_hypr_pkgs" =~ ^[Yy]$ ]]; then
-        echo "🔧 Installing Hyprland necessary packages..."
         $aur_helper -S wallust-git rofi-lbonn-wayland rofi-lbonn-wayland-git \
-                    pokemon-colorscripts-git wlogout zsh-theme-powerlevel10k-git grimblast-git \
+                    pokemon-colorscripts-git wlogout zsh-theme-powerlevel10k-git \
                     python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git --noconfirm
     fi
 }
 
 install_gaming_packages() {
     update_system
-    read -p "❓ Do you want to use Yay (Y) or Paru (P) for installation? " choice
-    case "$choice" in
-        [Yy]) aur_helper="yay" ;;
-        [Pp]) aur_helper="paru" ;;
-        *)
-            echo "⚠️ Invalid choice. Defaulting to yay."
-            aur_helper="yay"
-            ;;
-    esac
-
+    choose_aur_helper
     echo "🎮 Installing Gaming Packages..."
-    $aur_helper -S heroic-games-launcher-bin lutris steam steam-native-runtime steamtinkerlaunch \
-        dxvk-mingw-git gamemode mangohud lib32-mangohud vkbasalt lib32-vkbasalt protontricks-git \
-        boxtron reshade-shaders-git corectrl game-devices-udev input-devices-support \
-        keyboard-visualizer-git piper retroarch-autoconfig-udev-git wine-staging wine-meta --noconfirm
+    $aur_helper -S steam lutris wine wine-gecko wine-mono gamemode goverlay protonup-qt heroic-games-launcher-bin bottles --noconfirm
+}
+
+flutter_setup() {
+cat <<EOF
+
+⚠️  BEFORE WE START ⚠️
+👉 Download Flutter SDK (Linux) from:
+   https://docs.flutter.dev/get-started/install/linux
+
+📂 Save it as: ~/Downloads/flutter.zip
+
+EOF
+read -p "✅ Press Enter once you've done that..."
+
+echo "==> 🔄 Updating system..."
+sudo pacman -Syu --noconfirm
+
+echo "==> 🧰 Installing dependencies..."
+sudo pacman -S --noconfirm git unzip wget curl base-devel jdk-openjdk zip yay
+
+echo "==> 📁 Extracting Flutter SDK..."
+mkdir -p ~/.flutter
+[[ ! -f "$HOME/Downloads/flutter.zip" ]] && { echo "❌ flutter.zip not found!"; exit 1; }
+
+unzip -q "$HOME/Downloads/flutter.zip" -d ~/.flutter-temp
+mv ~/.flutter-temp/flutter/* ~/.flutter/
+rm -rf ~/.flutter-temp
+echo 'export PATH="$PATH:$HOME/.flutter/bin"' >> ~/.zshrc
+export PATH="$PATH:$HOME/.flutter/bin"
+
+echo "==> 📦 Installing Android SDK..."
+yay -S --noconfirm android-sdk android-sdk-platform-tools android-sdk-build-tools
+
+echo "==> ⚙️ Setting ANDROID_HOME..."
+echo 'export ANDROID_HOME=$HOME/Android/Sdk' >> ~/.zshrc
+echo 'export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"' >> ~/.zshrc
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
+
+echo "==> 📥 Downloading Android cmdline-tools..."
+mkdir -p $ANDROID_HOME/cmdline-tools/latest
+wget -O cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest
+mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+rm -rf $ANDROID_HOME/cmdline-tools/latest/cmdline-tools cmdline-tools.zip
+
+echo "==> ✅ Accepting licenses..."
+yes | sdkmanager --licenses
+sdkmanager --install "cmdline-tools;latest"
+
+echo "==> 💻 Installing Android Studio & VS Code..."
+yay -S --noconfirm android-studio visual-studio-code-bin
+
+echo "==> 🧱 Linux desktop toolchain..."
+sudo pacman -S --noconfirm clang cmake ninja gtk3
+
+echo "==> 🌐 Installing Google Chrome (optional)..."
+yay -S --noconfirm google-chrome
+
+echo "🎯 Running flutter doctor..."
+flutter doctor
+
+echo "🎉 Flutter setup complete, gorgeous 💕"
+echo "💡 Restart terminal or run: source ~/.zshrc"
 }
 
 show_menu() {
@@ -151,7 +218,7 @@ show_menu() {
         clear
         echo "===================================="
         echo "  ⚡ Arch Linux Package Installer ⚡"
-        echo "        ⚡ Script by AarushLohit ⚡"
+        echo "        ⚡ Script by aarushLohit ⚡"
         echo "===================================="
         echo "1) Install Paru"
         echo "2) Install Yay"
@@ -162,21 +229,23 @@ show_menu() {
         echo "7) Install Cinnamon"
         echo "8) Install General Software"
         echo "9) Install Gaming Packages"
-        echo "10) Exit"
+        echo "10) Flutter Setup"
+        echo "11) Exit"
         echo "===================================="
-        read -p "Enter choice (1-10): " choice
+        read -p "Enter choice (1-11): " choice
 
         case $choice in
             1) install_paru ;;
             2) install_yay ;;
-            3) install_blackarch ;;
+            3) install_blackarch_repo ;;
             4) install_chaotic_aur ;;
             5) install_hyprland ;;
             6) install_gnome ;;
             7) install_cinnamon ;;
             8) install_general_software ;;
             9) install_gaming_packages ;;
-            10) exit 0 ;;
+            10) flutter_setup ;;
+            11) exit 0 ;;
             *) echo "❌ Invalid choice!" ;;
         esac
 
@@ -187,3 +256,4 @@ show_menu() {
 }
 
 show_menu
+
