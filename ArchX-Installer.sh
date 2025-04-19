@@ -5,9 +5,12 @@
 #        Script by aarushLohit
 # ==============================
 
+set -e
+
 update_system() {
     echo "🔄 Updating system..."
     sudo pacman -Syu base base-devel --noconfirm
+    rm -rf ~/.cache/vulkan
 }
 
 is_installed() {
@@ -18,51 +21,60 @@ ask_reinstall() {
     local package=$1
     if is_installed "$package"; then
         read -p "⚠️ $package is already installed. Do you want to reinstall? (y/N): " choice
-        [[ $choice =~ ^[Yy]$ ]] || return 1
+        [[ "$choice" =~ ^[Yy]$ ]] || return 1
     fi
     return 0
 }
 
 choose_aur_helper() {
     read -p "❓ Which AUR helper do you want to use (yay/paru)? " aur_helper
-    [[ "$aur_helper" != "yay" && "$aur_helper" != "paru" ]] && aur_helper="yay"
+    if [[ "$aur_helper" != "yay" && "$aur_helper" != "paru" ]]; then
+        echo "⚠️ Invalid choice. Defaulting to yay."
+        aur_helper="yay"
+    fi
 }
 
 install_paru() {
     update_system
     ask_reinstall "paru" || return
     echo "🔧 Installing Paru..."
-    git clone https://aur.archlinux.org/paru.git && cd paru
-    makepkg -si
+    git clone https://aur.archlinux.org/paru.git
+    cd paru
+    makepkg -si --noconfirm
     cd ..
+    rm -rf paru/
 }
 
 install_yay() {
     update_system
     ask_reinstall "yay" || return
     echo "🔧 Installing Yay..."
-    git clone https://aur.archlinux.org/yay.git && cd yay
-    makepkg -si
+    git clone https://aur.archlinux.org/yay.git
+    cd yay
+    makepkg -si --noconfirm
     cd ..
+    rm -rf yay/
 }
 
 install_blackarch_repo() {
     echo "🔧 Installing BlackArch Repository..."
     curl -O https://blackarch.org/strap.sh
-    echo "🔐 Verifying script signature..."
-    echo "Please manually verify the signature for now."
+    echo "🔐 Please manually verify the script signature before proceeding!"
     chmod +x strap.sh
     sudo ./strap.sh
+    rm -f strap.sh
     sudo pacman -Syu
 }
 
 install_chaotic_aur() {
     update_system
     echo "🔧 Installing Chaotic AUR..."
-    git clone https://github.com/SharafatKarim/chaotic-AUR-installer.git && cd chaotic-AUR-installer
-    chmod +x *
+    git clone https://github.com/SharafatKarim/chaotic-AUR-installer.git
+    cd chaotic-AUR-installer
+    chmod +x install.bash
     sudo ./install.bash
     cd ..
+    rm -rf chaotic-AUR-installer/
 }
 
 install_hyprland() {
@@ -70,41 +82,43 @@ install_hyprland() {
     choose_aur_helper
 
     read -p "⚠️ Do you want to install Chaotic AUR for smoother Hyprland installation? (y/N): " choice
-    [[ $choice =~ ^[Yy]$ ]] && install_chaotic_aur
+    [[ "$choice" =~ ^[Yy]$ ]] && install_chaotic_aur
 
-    if pacman -Qq hyprland &>/dev/null; then
+    if is_installed "hyprland"; then
         read -p "⚠️ Hyprland is already installed. Do you want to reinstall? (y/N): " reinstall_choice
         [[ ! "$reinstall_choice" =~ ^[Yy]$ ]] && return
     fi
 
     echo "🔧 Installing Hyprland and dependencies..."
-    $aur_helper -Rns rofi-lbonn-wayland-git --noconfirm 2>/dev/null
-    $aur_helper -S hyprland waybar rofi dunst alacritty thunar polkit-gnome nwg-look grimblast-git --noconfirm
+    $aur_helper -Rns rofi-lbonn-wayland-git --noconfirm 2>/dev/null || true
+    $aur_helper -S hyprland waybar  dunst alacritty thunar polkit-gnome nwg-look grimblast-git
 
     echo "🔧 Installing additional Hyprland packages..."
     $aur_helper -S wallust-git rofi-lbonn-wayland rofi-lbonn-wayland-git \
                 pokemon-colorscripts-git wlogout zsh-theme-powerlevel10k-git \
-                python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git --noconfirm
+                python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git
 
     echo "🎨 Select Hyprland dotfiles:"
     echo "1) Jakoolit"
     echo "2) Prasanth Rangan"
     read -p "Enter choice (1 or 2): " hypr_choice
 
-    case $hypr_choice in
+    case "$hypr_choice" in
         1)
             read -p "Enter your username: " user
-            git clone https://github.com/Jakoolit/Arch-Hyprland.git && cd Arch-Hyprland
+            git clone https://github.com/Jakoolit/Arch-Hyprland.git
+            cd Arch-Hyprland
             mkdir -p install-scripts/Install-Logs
             sudo chmod -R 777 install-scripts/Install-Logs
-            sudo chown -R ${user}:${user} install-scripts/Install-Logs
+            sudo chown -R "${user}:${user}" install-scripts/Install-Logs
             chmod -R u+w install-scripts/Install-Logs
             ./install.sh
             cd ..
+            rm -rf Arch-Hyprland/
             ;;
         2)
-            git clone https://github.com/prasanthrangan/hyprdots.git && cd hyprdots
-            cd Scripts
+            git clone https://github.com/prasanthrangan/hyprdots.git
+            cd hyprdots/Scripts
             sudo ./install.sh
             cd ../..
             ;;
@@ -133,12 +147,26 @@ install_general_software() {
     read -p "❓ Do you want to install Hyprland packages too? (y/N): " install_hypr_pkgs
 
     echo "🔧 Installing general software..."
-    $aur_helper -S firefox vlc gimp libreoffice-fresh neofetch kate kwrite visual-studio-code-bin virtualbox linux-headers steam ocs-url wine winetricks obs-studio spectacle xournalpp proton proton-tricks --noconfirm
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak remote-add --if-not-exists --subset=verified flathub-verified https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak remote-add --if-not-exists --subset=verified_floss flathub-verified_floss https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak remote-add --if-not-exists gnome-nightly https://nightly.gnome.org/gnome-nightly.flatpakrepo
+    sudo flatpak remote-add --if-not-exists eclipse-nightly https://download.eclipse.org/linuxtools/flatpak-I-builds/eclipse.flatpakrepo
+
+    sudo flatpak install -y flathub com.gigitux.youp
+
+    $aur_helper -S android-studio visual-studio-code-bin google-chrome \
+         android-sdk-platform-tools android-sdk-build-tools \
+        firefox vlc gimp libreoffice-fresh neofetch kate kwrite virtualbox \
+        linux-headers steam ocs-url wine winetricks obs-studio spectacle \
+        xournalpp proton proton-tricks extension-manager ark vulkan-intel lib32-vulkan-intel vulkan-tools --noconfirm
+
+    sudo pacman -S --noconfirm clang cmake ninja gtk3
 
     if [[ "$install_hypr_pkgs" =~ ^[Yy]$ ]]; then
         $aur_helper -S wallust-git rofi-lbonn-wayland rofi-lbonn-wayland-git \
                     pokemon-colorscripts-git wlogout zsh-theme-powerlevel10k-git \
-                    python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git --noconfirm
+                    python-pyamdgpuinfo oh-my-zsh-git hyde-cli-git swaylock-effects-git
     fi
 }
 
@@ -146,71 +174,14 @@ install_gaming_packages() {
     update_system
     choose_aur_helper
     echo "🎮 Installing Gaming Packages..."
-    $aur_helper -S steam lutris wine wine-gecko wine-mono gamemode goverlay protonup-qt heroic-games-launcher-bin bottles --noconfirm
+    $aur_helper -S steam lutris wine wine-gecko wine-mono gamemode \
+        goverlay protonup-qt heroic-games-launcher-bin bottles --noconfirm
 }
 
-flutter_setup() {
-cat <<EOF
-
-⚠️  BEFORE WE START ⚠️
-👉 Download Flutter SDK (Linux) from:
-   https://docs.flutter.dev/get-started/install/linux
-
-📂 Save it as: ~/Downloads/flutter.zip
-
-EOF
-read -p "✅ Press Enter once you've done that..."
-
-echo "==> 🔄 Updating system..."
-sudo pacman -Syu --noconfirm
-
-echo "==> 🧰 Installing dependencies..."
-sudo pacman -S --noconfirm git unzip wget curl base-devel jdk-openjdk zip yay
-
-echo "==> 📁 Extracting Flutter SDK..."
-mkdir -p ~/.flutter
-[[ ! -f "$HOME/Downloads/flutter.zip" ]] && { echo "❌ flutter.zip not found!"; exit 1; }
-
-unzip -q "$HOME/Downloads/flutter.zip" -d ~/.flutter-temp
-mv ~/.flutter-temp/flutter/* ~/.flutter/
-rm -rf ~/.flutter-temp
-echo 'export PATH="$PATH:$HOME/.flutter/bin"' >> ~/.zshrc
-export PATH="$PATH:$HOME/.flutter/bin"
-
-echo "==> 📦 Installing Android SDK..."
-yay -S --noconfirm android-sdk android-sdk-platform-tools android-sdk-build-tools
-
-echo "==> ⚙️ Setting ANDROID_HOME..."
-echo 'export ANDROID_HOME=$HOME/Android/Sdk' >> ~/.zshrc
-echo 'export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"' >> ~/.zshrc
-export ANDROID_HOME=$HOME/Android/Sdk
-export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
-
-echo "==> 📥 Downloading Android cmdline-tools..."
-mkdir -p $ANDROID_HOME/cmdline-tools/latest
-wget -O cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
-unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest
-mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-rm -rf $ANDROID_HOME/cmdline-tools/latest/cmdline-tools cmdline-tools.zip
-
-echo "==> ✅ Accepting licenses..."
-yes | sdkmanager --licenses
-sdkmanager --install "cmdline-tools;latest"
-
-echo "==> 💻 Installing Android Studio & VS Code..."
-yay -S --noconfirm android-studio visual-studio-code-bin
-
-echo "==> 🧱 Linux desktop toolchain..."
-sudo pacman -S --noconfirm clang cmake ninja gtk3
-
-echo "==> 🌐 Installing Google Chrome (optional)..."
-yay -S --noconfirm google-chrome
-
-echo "🎯 Running flutter doctor..."
-flutter doctor
-
-echo "🎉 Flutter setup complete, gorgeous 💕"
-echo "💡 Restart terminal or run: source ~/.zshrc"
+install_hacking_tools() {
+    update_system
+    echo "🔧 Installing Hacking Tools..."
+    yay -S --noconfirm metasploit powershell-empire bettercap beef nmap zenmap nikto masscan gobuster recon-ng scapy tcpdump wireshark-qt john hydra rainbowcrack wordlists sqlmap aircrack-ng reaver airgeddon autopsy sleuthkit volatility3 burpsuite zaproxy gophish maltego nessus
 }
 
 show_menu() {
@@ -229,12 +200,12 @@ show_menu() {
         echo "7) Install Cinnamon"
         echo "8) Install General Software"
         echo "9) Install Gaming Packages"
-        echo "10) Flutter Setup"
+        echo "10) Install Hacking Tools" # New menu option
         echo "11) Exit"
         echo "===================================="
         read -p "Enter choice (1-11): " choice
 
-        case $choice in
+        case "$choice" in
             1) install_paru ;;
             2) install_yay ;;
             3) install_blackarch_repo ;;
@@ -244,16 +215,15 @@ show_menu() {
             7) install_cinnamon ;;
             8) install_general_software ;;
             9) install_gaming_packages ;;
-            10) flutter_setup ;;
-            11) exit 0 ;;
+            10) install_hacking_tools ;; # Call new function for hacking tools
+            11) echo "👋 Bye!"; exit 0 ;;
             *) echo "❌ Invalid choice!" ;;
         esac
 
         echo "🎉 Returning to menu in 3 seconds..."
         sleep 3
-        timeout 3 curl -s parrot.live
+        timeout 3 curl -s parrot.live || true
     done
 }
 
 show_menu
-
