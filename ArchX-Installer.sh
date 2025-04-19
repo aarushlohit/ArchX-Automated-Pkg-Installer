@@ -90,8 +90,8 @@ install_hyprland() {
     fi
 
     echo "🔧 Installing Hyprland and dependencies..."
-    $aur_helper -Rns rofi-lbonn-wayland-git --noconfirm 2>/dev/null || true
-    $aur_helper -S hyprland waybar  dunst alacritty thunar polkit-gnome nwg-look grimblast-git
+    $aur_helper -Rns rofi-lbonn-wayland-git 2>/dev/null || true
+    $aur_helper -S hyprland waybar dunst alacritty thunar polkit-gnome nwg-look grimblast-git
 
     echo "🔧 Installing additional Hyprland packages..."
     $aur_helper -S wallust-git rofi-lbonn-wayland rofi-lbonn-wayland-git \
@@ -181,7 +181,7 @@ install_gaming_packages() {
 install_hacking_tools() {
     update_system
     echo "🔧 Installing Hacking Tools..."
-    yay -S --noconfirm metasploit powershell-empire bettercap beef nmap zenmap nikto masscan gobuster recon-ng scapy tcpdump wireshark-qt john hydra rainbowcrack wordlists sqlmap aircrack-ng reaver airgeddon autopsy sleuthkit volatility3 burpsuite zaproxy gophish maltego nessus
+    yay -S --noconfirm metasploit bettercap beef nmap zenmap nikto masscan gobuster recon-ng scapy tcpdump wireshark-qt john hydra rainbowcrack wordlists sqlmap aircrack-ng reaver airgeddon autopsy sleuthkit volatility3 burpsuite zaproxy gophish maltego s
 }
 
 show_menu() {
@@ -226,4 +226,43 @@ show_menu() {
     done
 }
 
-show_menu
+show_menu #add new option flutter install append this code #!/bin/bash
+
+echo "✨ Setting up Flutter environment..."
+
+# Step 1: Install Android Studio and Chrome using yay
+yay -S --needed android-studio google-chrome
+
+# Ask user if Android Studio is configured
+read -p "🛠️  Did you finish configuring Android Studio (SDK path, etc)? (y/n): " studio_configured
+
+if [[ "$studio_configured" == "y" || "$studio_configured" == "Y" ]]; then
+    # Step 2: Create flutter directory and clone the stable channel
+    mkdir -p ~/.flutter
+    git clone https://github.com/flutter/flutter.git -b stable ~/.flutter
+
+    # Step 3: Add Flutter to PATH
+    if ! grep -q ".flutter/bin" ~/.bashrc; then
+        echo 'export PATH="$HOME/.flutter/bin:$PATH"' >> ~/.bashrc
+        export PATH="$HOME/.flutter/bin:$PATH"
+        echo "✅ Flutter path added to .bashrc"
+    else
+        echo "ℹ️ Flutter path already exists in .bashrc"
+    fi
+
+    # Step 4: Fix Chrome path issue
+    if [ -f /usr/bin/google-chrome-stable ]; then
+        sudo cp /usr/bin/google-chrome-stable /usr/bin/google-chrome
+        echo "🔧 Linked google-chrome-stable to google-chrome"
+    fi
+
+    # Step 5: Run Flutter doctor
+    echo "🚀 Running Flutter Doctor..."
+    flutter doctor
+    flutter doctor --android-licenses
+    flutter doctor
+
+    echo "🎉 Flutter setup complete, baby! You're all set to code 🌈"
+else
+    echo "⏸️ Okay baby, finish your Android Studio setup first and then run me again 💕"
+fi
