@@ -11,18 +11,22 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 RED='\033[0;31m'
 RESET='\033[0m'
-
-# Show success + return message with curl animation
 show_success() {
     echo -e "✅ $1 is successfully installed!"
     echo -e "🔁 Returning to home in 3 seconds..."
     sleep 1
 
-    # Check if cowsay is installed before running it
-    if command -v cowsay ; then
+    # Check if cowsay is installed
+    if ! command -v cowsay &> /dev/null; then
+        echo "Cowsay not found. Installing cowsay..."
+        sudo pacman -S --noconfirm cowsay
+    fi
+
+    # Run cowsay if installed
+    if command -v cowsay &> /dev/null; then
         cowsay "Successfully installed"
     else
-        echo "Cowsay not installed, skipping animation."
+        echo "Cowsay installation failed. Skipping animation."
     fi
 
     sleep 3
@@ -35,10 +39,59 @@ update_system() {
     sudo pacman -Syu base base-devel --noconfirm
     rm -rf ~/.cache/vulkan
 }
+#!/bin/bash
 
+setup_apache() {
+  echo "🌐 Starting Apache Web Server setup..."
+
+  echo "📦 Installing Apache (httpd)..."
+  sudo pacman -S --noconfirm apache
+
+  echo "🚀 Enabling and starting httpd service..."
+  sudo systemctl enable httpd
+  sudo systemctl start httpd
+
+  echo "📄 Creating default index.html..."
+  sudo mkdir -p /srv/http
+  echo '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hello Baby</title>
+</head>
+<body>
+    <h1>Hello baby 🥺</h1>
+</body>
+</html>' | sudo tee /srv/http/index.html > /dev/null
+
+  echo "🔐 Setting permissions..."
+  sudo chown -R root:http /srv/http
+  sudo chmod -R 755 /srv/http
+
+  echo "✅ Apache is installed and running!"
+  echo "🌍 Visit: http://localhost to see your baby page~"
+}
 # Check if a package is installed
 is_installed() {
     pacman -Qq "$1"
+}
+rate_mirrors() {
+    # Install rate-mirrors if not installed
+    if ! command -v rate-mirrors &> /dev/null; then
+        echo "Rate-mirrors not found. Installing rate-mirrors..."
+        yay -S --noconfirm rate-mirrors
+    fi
+
+    # Backup the current mirrorlist
+    echo "Backing up current mirrorlist..."
+    cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bak
+
+    # Run rate-mirrors to rank mirrors and update the mirrorlist
+    echo "Ranking mirrors and updating mirrorlist..."
+    sudo rate-mirrors --allow-root arch | sudo tee /etc/pacman.d/mirrorlist
+
+    # Display success message
+    show_success "Rate-mirrors"
 }
 
 # Ask if reinstall
@@ -55,10 +108,10 @@ ask_reinstall() {
 install_blackarch_repo() {
     echo "🖤 Installing BlackArch Repository..."
     echo "🔐 Please manually verify the script signature before proceeding!"
-    curl -O https://blackarch.org/strap.sh
     chmod +x strap.sh
     sudo ./strap.sh
     rm -f strap.sh
+    sudo pacman -S --needed ettercap dnsmasq bully pixiewps isc-dhcp asleap hashcat hostapd tcpdump tshark mdk4 reaver hcxdumptool hcxtools john crunch lighttpd
     sudo pacman -Syu
     show_success "BlackArch Repository"
 }
@@ -86,8 +139,8 @@ install_paru() {
 
 # Install Yay
 install_yay() {
+    sudo pacman -Syy
     update_system
-    ask_reinstall "yay" || return
     git clone https://aur.archlinux.org/yay.git
     cd yay
     makepkg -si --noconfirm
@@ -210,7 +263,7 @@ install_general_software() {
     sudo flatpak remote-add --if-not-exists gnome-nightly https://nightly.gnome.org/gnome-nightly.flatpakrepo
     sudo flatpak remote-add --if-not-exists eclipse-nightly https://download.eclipse.org/linuxtools/flatpak-I-builds/eclipse.flatpakrepo
 
-    # Install general software packages (without error suppression)
+    # Install general software packages (without suppression)
     sudo pacman -S --noconfirm clang cmake ninja gtk3
 
     # Install AUR packages, suppress output
@@ -220,8 +273,8 @@ install_general_software() {
         virtualbox steam ocs-url obs-studio spectacle \
         xournalpp protontricks extension-manager ark \
         vulkan-intel lib32-vulkan-intel vulkan-tools zapzap thunderbird \
-        rate-mirrors
-
+        rate-mirrors power-profiles-daemon 
+    
     # Install Hyprland packages only if needed
     if $install_hyprland_pkgs; then
         install_hyprland_packages_only
@@ -268,36 +321,33 @@ setup_android_studio() {
         echo "❌ Please download Android Studio first."
     fi
 }
-
 main_menu() {
-   clear
-echo -e "${CYAN}"
-echo "╔══════════════════════════════════════════════════════════════════════╗"
-echo "║     🧠 ARCH LINUX ULTIMATE INSTALLATION PORTAL 🛠️                    ║"
-echo "╠══════════════════════════════════════════════════════════════════════╣"
-echo -e "${YELLOW}║ 💡 Pick your setup — Choose a number to proceed                      ║${CYAN}"
-echo "╠══════════════════════════════════════════════════════════════════════╣"
-echo -e "${GREEN}║  1. 🚀 Install Paru (AUR Helper)                                     ║"
-echo "║  2. ⚙️  Install Yay (AUR Helper)                                      ║"
-echo "║  3. 🌀 Install Hyprland (Full Setup + Dotfiles)                      ║"
-echo "║  4. 🖥️  Install GNOME Desktop Environment                             ║"
-echo "║  5. 🎨 Install Cinnamon Desktop                                      ║"
-echo "║  6. 🧊 Install KDE Plasma Desktop                                    ║"
-echo "║  7. 💙 Setup Flutter SDK (Mobile Dev)                                ║"
-echo "║  8. 🧰 Install General Productivity Software                         ║"
-echo "║  9. 🎮 Install Gaming Packages & Tools                               ║"
-echo "║ 10. 🕵️  Install Hacking / Pentest Tools                               ║"
-echo "║ 11. 📱 Android Studio Setup (Manual)                                 ║"
-echo "║ 12. 💫 Install Chaotic AUR Repo                                      ║"
-echo "║ 13. 🖤 Add BlackArch Repository (Advanced)                            ║"
-echo -e "${RED}║ 14. ❌ Exit Portal                                                    ║${CYAN}"
-echo "╚══════════════════════════════════════════════════════════════════════╝"
-echo -e "${RESET}"
-read -p "👉 Enter your choice (1-14): " choice
+    clear
+    echo " Welcome to your lovely Arch installer menu, baby 💖"
+    echo "Please choose an option:"
+    echo " 1) Install Paru"
+    echo " 2) Install Yay"
+    echo " 3) Install Hyprland"
+    echo " 4) Install GNOME"
+    echo " 5) Install Cinnamon"
+    echo " 6) Install Plasma"
+    echo " 7) Install Flutter"
+    echo " 8) Install General Software"
+    echo " 9) Install Gaming Packages"
+    echo "10) Install Hacking Tools"
+    echo "11) Setup Android Studio"
+    echo "12) Install Chaotic AUR"
+    echo "13) Install BlackArch Repo"
+    echo "14) Setup Apache Server"
+    echo "15) Install Rate-Mirrors"
+    echo "16) 💕 Exit"
+    echo -n "Enter your choice (1-16): "
+    read choice
+}
 
-
-
-
+# Infinite loop for menu
+while true; do
+    main_menu
     case "$choice" in
         1) install_paru ;;
         2) install_yay ;;
@@ -312,12 +362,9 @@ read -p "👉 Enter your choice (1-14): " choice
         11) setup_android_studio ;;
         12) install_chaotic_aur ;;
         13) install_blackarch_repo ;;
-        14) exit 0 ;;
-        *) echo "❌ Invalid choice, try again." ;;
+        14) setup_apache ;;
+        15) rate_mirrors ;;   # Updated to call the rate_mirrors function
+        16) echo "👋 Exiting... Have a lovely Arch day, baby 💕"; exit 0 ;;  # Keep the exit option
+        *) echo "❌ Invalid choice. Please try again." ; sleep 2 ;;
     esac
-}
-
-# Infinite loop for menu
-while true; do
-    main_menu
 done
