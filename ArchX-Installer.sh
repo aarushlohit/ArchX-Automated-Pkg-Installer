@@ -262,7 +262,8 @@ install_general_software() {
     sudo flatpak remote-add --if-not-exists --subset=verified_floss flathub-verified_floss https://dl.flathub.org/repo/flathub.flatpakrepo
     sudo flatpak remote-add --if-not-exists gnome-nightly https://nightly.gnome.org/gnome-nightly.flatpakrepo
     sudo flatpak remote-add --if-not-exists eclipse-nightly https://download.eclipse.org/linuxtools/flatpak-I-builds/eclipse.flatpakrepo
-
+     git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    sudo bash /home/aarush/auto-cpufreq/auto-cpufreq-installer
     # Install general software packages (without suppression)
     sudo pacman -S --noconfirm clang cmake ninja gtk3
 
