@@ -84,7 +84,7 @@ rate_mirrors() {
 
     # Backup the current mirrorlist
     echo "Backing up current mirrorlist..."
-    cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bak
+   sudo cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bak
 
     # Run rate-mirrors to rank mirrors and update the mirrorlist
     echo "Ranking mirrors and updating mirrorlist..."
@@ -111,7 +111,7 @@ install_blackarch_repo() {
     chmod +x strap.sh
     sudo ./strap.sh
     rm -f strap.sh
-    sudo pacman -S --needed ettercap dnsmasq bully pixiewps isc-dhcp asleap hashcat hostapd tcpdump tshark mdk4 reaver hcxdumptool hcxtools john crunch lighttpd
+    sudo pacman -S --needed ettercap dnsmasq bully pixiewps  asleap hashcat hostapd tcpdump  mdk4 reaver hcxdumptool hcxtools john crunch lighttpd
     sudo pacman -Syu
     show_success "BlackArch Repository"
 }
@@ -166,7 +166,7 @@ install_hyprland_packages_only() {
     hyprland_pkgs=(
         "hyprland" "waybar" "dunst" "alacritty" "thunar"
         "polkit-gnome" "nwg-look" "grimblast-git" "wallust-git"
-        "rofi-lbonn-wayland" "rofi-lbonn-wayland-git" "pokemon-colorscripts-git"
+         "pokemon-colorscripts-git"
         "wlogout" "zsh-theme-powerlevel10k-git" "python-pyamdgpuinfo"
         "oh-my-zsh-git" "hyde-cli-git" "swaylock-effects-git"
     )
@@ -237,12 +237,34 @@ install_plasma() {
 
 install_flutter() {
     read -p "🛠️  Did you finish configuring Android Studio (SDK path, etc)? (y/n): " studio_configured
+
     if [[ "$studio_configured" =~ ^[Yy]$ ]]; then
-        mkdir -p ~/.flutter
-        git clone https://github.com/flutter/flutter.git -b stable ~/.flutter
-        echo 'export PATH="$HOME/.flutter/bin:$PATH"' >> ~/.bashrc
-        echo 'export PATH="$HOME/.flutter/bin:$PATH"' >> ~/.zshrc
-        show_success "Flutter"
+        FLUTTER_DIR="/opt/flutter"
+
+        echo "🔧 Installing Flutter system-wide at $FLUTTER_DIR"
+
+        sudo mkdir -p /opt
+
+        if [[ ! -d "$FLUTTER_DIR" ]]; then
+            sudo git clone https://github.com/flutter/flutter.git -b stable "$FLUTTER_DIR"
+        else
+            echo "ℹ️ Flutter already exists at $FLUTTER_DIR, skipping clone"
+        fi
+
+        sudo chown -R root:root "$FLUTTER_DIR"
+        sudo chmod -R 755 "$FLUTTER_DIR"
+
+        echo "🌍 Setting global PATH"
+        sudo tee /etc/profile.d/flutter.sh > /dev/null <<EOF
+export PATH="/opt/flutter/bin:\$PATH"
+EOF
+
+        sudo chmod +x /etc/profile.d/flutter.sh
+
+        show_success "Flutter (system-wide)"
+
+        echo "✅ Log out and log back in (for ALL users), then run:"
+        echo "   flutter doctor"
     else
         echo "⏸️ Please finish setting up Android Studio first and then run again."
     fi
@@ -262,8 +284,7 @@ install_general_software() {
     sudo flatpak remote-add --if-not-exists --subset=verified_floss flathub-verified_floss https://dl.flathub.org/repo/flathub.flatpakrepo
     sudo flatpak remote-add --if-not-exists gnome-nightly https://nightly.gnome.org/gnome-nightly.flatpakrepo
     sudo flatpak remote-add --if-not-exists eclipse-nightly https://download.eclipse.org/linuxtools/flatpak-I-builds/eclipse.flatpakrepo
-     git clone https://github.com/AdnanHodzic/auto-cpufreq.git
-    sudo bash /home/aarush/auto-cpufreq/auto-cpufreq-installer
+
     # Install general software packages (without suppression)
     sudo pacman -S --noconfirm clang cmake ninja gtk3
 
@@ -282,7 +303,7 @@ install_general_software() {
     fi
 
     # Remove debug packages (without output suppression)
-    yay -Rns rofi-lbonn-wayland-git-debug yay-debug || true
+    yay -Rns yay-debug || true
 
     show_success "General Software"
 }
